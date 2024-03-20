@@ -66,12 +66,12 @@ ENV PATH ${HOME}/bin:$PATH
 # install conda
 USER root
 RUN chmod -R 777 /home/container_user
-ENV CONDA_FILE https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+ENV CONDA_FILE https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 RUN echo "export PATH=${HOME}/conda/bin:$PATH" > /etc/profile.d/conda.sh && \
-    wget --quiet ${CONDA_FILE} -O /tmp/miniconda.sh && \
-    /bin/bash /tmp/miniconda.sh -b -p ${HOME}/conda && \
-    rm /tmp/miniconda.sh && \
-    ${HOME}/conda/bin/conda clean -atipy
+    wget --quiet ${CONDA_FILE} -O /tmp/miniconda.sh 
+RUN /bin/bash /tmp/miniconda.sh -b -p ${HOME}/conda && \
+    rm /tmp/miniconda.sh 
+RUN ${HOME}/conda/bin/conda clean -atipy
 ENV PATH ${HOME}/conda/bin:$PATH
 
 # install mamba
@@ -108,7 +108,7 @@ COPY environment.yml ${HOME}/tmp/environment.yml
 # install conda environment
 # NOTE: conda clean -atipy
 #   removes everything w/o confirmation (leaves all environments functional).
-RUN mamba config --set always_yes yes --set changeps1 no
+RUN conda config --set always_yes yes --set changeps1 no
 RUN mamba update mamba --yes
 RUN mamba env update -v -n root --file ${HOME}/tmp/environment.yml
 RUN mamba list --name root
@@ -134,7 +134,8 @@ COPY renv.lock ${HOME}/tmp/renv.lock
 
 # Prepare the renv command
 RUN mkdir -p ${HOME}/tmp/renv/local
-RUN R -q -e 'install.packages("remotes")'
+RUN R -e "install.packages('remotes', repos='http://cran.us.r-project.org');     if (!library(remotes, logical.return=T)) quit(status=10)"
+RUN R -e "install.packages('BiocManager', repos='http://cran.us.r-project.org');     if (!library(remotes, logical.return=T)) quit(status=10)"
 RUN R -q -e 'remotes::install_version("renv", version = "1.0.3", repos = "http://cran.us.r-project.org")'
 RUN echo "library(renv)" > ${HOME}/tmp/run.R
 RUN echo "renv::restore(lockfile=\"${HOME}/tmp/renv.lock\", prompt=F)" >> ${HOME}/tmp/run.R
